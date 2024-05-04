@@ -70,7 +70,7 @@ def experiment(params):
     temperature_end = params["temperature_end"]
 
     set_seed(seed)
-
+    print("Initializing Experiment")
     wandb.init(
         project="causality",
         config=params
@@ -83,6 +83,7 @@ def experiment(params):
     _ = model.to("cuda")  
     _ = model.eval() 
 
+    print("Task alignment check")
     if prealign == True:
         asses_prealign_task(model, tokenizer)
     else:
@@ -91,13 +92,16 @@ def experiment(params):
     ###################
     # data loaders
     ###################
+    print("Create Dataloaders")
     train_dataloader, eval_dataloader, test_dataloader = create_data(sample, tokenizer, batch_size)
 
+    print("Intervention setup")
     config = simple_boundless_das_position_config(type(model), "block_output", layer)
     intervenable = IntervenableModel(config, model)
     intervenable.set_device("cuda")
     intervenable.disable_model_gradients()
 
+    print("Hyperparams init")
     t_total = int(len(train_dataloader) * 3)
     warm_up_steps = 0.1 * t_total
     optimizer_params = []
@@ -117,7 +121,7 @@ def experiment(params):
         .to("cuda")
     )
     intervenable.set_temperature(temperature_schedule[total_step])
-
+    print("Training")
     intervenable.model.train()  # train enables drop-off but no grads
     print("llama trainable parameters: ", count_parameters(intervenable.model))
     print("intervention trainable parameters: ", intervenable.count_parameters())
@@ -157,6 +161,7 @@ def experiment(params):
                     intervenable.set_temperature(temperature_schedule[total_step])
             total_step += 1
     # evaluation on the test set
+    print("Evaluation")
     eval_labels = []
     eval_preds = []
     with torch.no_grad():
