@@ -1,5 +1,4 @@
 import torch
-from pyvene import create_llama, create_gemma
 from tqdm import tqdm, trange
 from datasets import Dataset
 from torch.utils.data import DataLoader
