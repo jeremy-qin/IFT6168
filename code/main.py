@@ -29,6 +29,7 @@ sys.path.append("/home/qinjerem/scratch/IFT6168/pyvene")
 import time
 import pyvene
 import torch
+import wandb
 from tqdm import tqdm, trange
 from datasets import Dataset
 from torch.utils.data import DataLoader
@@ -70,6 +71,11 @@ def experiment(params):
 
     set_seed(seed)
 
+    wandb.init(
+        project="causality",
+        config=params
+    )
+
     if model == "llama":
         config, tokenizer, model = create_llama()
     elif model == "gemma":
@@ -78,7 +84,7 @@ def experiment(params):
     _ = model.eval() 
 
     if prealign == True:
-        asses_prealign_task()
+        asses_prealign_task(model, tokenizer)
     else:
         print("Skip prealigning")
 
@@ -138,6 +144,7 @@ def experiment(params):
             loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"], intervenable)
             loss_str = round(loss.item(), 2)
             epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
+            wandb.log({"loss": loss, "acc": eval_metrics["accuracy"]})
 
             if gradient_accumulation_steps > 1:
                 loss = loss / gradient_accumulation_steps
@@ -168,6 +175,7 @@ def experiment(params):
             eval_preds += [counterfactual_outputs.logits]
     eval_metrics = compute_metrics(eval_preds, eval_labels)
     print(eval_metrics)
+    wandb.log({"eval acc": eval_metrics["accuracy"]})
 
     print("Done")
 

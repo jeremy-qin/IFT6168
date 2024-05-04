@@ -7,7 +7,7 @@ from tutorial_price_tagging_utils import (
     factual_sampler
 )
 
-def asses_prealign_task(model):
+def asses_prealign_task(model, tokenizer):
     # if model == "llama":
     #     config, tokenizer, model = create_llama()
     # elif model == "gemma":
