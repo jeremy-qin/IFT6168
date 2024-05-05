@@ -38,29 +38,29 @@ prealign_dataset = Dataset.from_dict(
 prealign_dataset.set_format("torch", columns=["input_ids", "labels"])
 prealign_dataloader = DataLoader(prealign_dataset, batch_size=8)
 
-total_count = 0
-correct_count = 0
-with torch.no_grad():
-    for step, inputs in enumerate(tqdm(prealign_dataloader)):
-        for k, v in inputs.items():
-            if v is not None and isinstance(v, torch.Tensor):
-                inputs[k] = v.to(llama.device)
+# total_count = 0
+# correct_count = 0
+# with torch.no_grad():
+#     for step, inputs in enumerate(tqdm(prealign_dataloader)):
+#         for k, v in inputs.items():
+#             if v is not None and isinstance(v, torch.Tensor):
+#                 inputs[k] = v.to(llama.device)
 
-        # aligning forward!
-        outputs = llama(
-            input_ids=inputs["input_ids"],
-            labels=inputs["labels"],
-        )
+#         # aligning forward!
+#         outputs = llama(
+#             input_ids=inputs["input_ids"],
+#             labels=inputs["labels"],
+#         )
 
-        actual_test_labels = inputs["labels"][:, -1]
-        pred_test_labels = torch.argmax(outputs.logits[:, -1], dim=-1)
+#         actual_test_labels = inputs["labels"][:, -1]
+#         pred_test_labels = torch.argmax(outputs.logits[:, -1], dim=-1)
 
-        correct_labels = actual_test_labels == pred_test_labels
+#         correct_labels = actual_test_labels == pred_test_labels
 
-        total_count += len(correct_labels)
-        correct_count += correct_labels.sum().tolist()
-current_acc = round(correct_count / total_count, 2)
-print(f"[WARNING: THIS NEEDS TO BE GOOD!] prealign task accuracy: {current_acc}")
+#         total_count += len(correct_labels)
+#         correct_count += correct_labels.sum().tolist()
+# current_acc = round(correct_count / total_count, 2)
+# print(f"[WARNING: THIS NEEDS TO BE GOOD!] prealign task accuracy: {current_acc}")
 
 set_seed(42)
 
@@ -143,124 +143,126 @@ def simple_boundless_das_position_config(model_type, intervention_type, layer):
 config = simple_boundless_das_position_config(
     type(llama), "block_output", 15
 )
+print("Intervenable Model")
 intervenable = IntervenableModel(config, llama)
+intervenable.save(save_directory="./alpaca")
 intervenable.set_device("cuda")
 intervenable.disable_model_gradients()
 
-t_total = int(len(train_dataloader) * 3)
-warm_up_steps = 0.1 * t_total
-optimizer_params = []
-for k, v in intervenable.interventions.items():
-    optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
-    optimizer_params += [{"params": v[0].intervention_boundaries, "lr": 1e-2}]
-optimizer = torch.optim.Adam(optimizer_params, lr=1e-3)
-scheduler = get_linear_schedule_with_warmup(
-    optimizer, num_warmup_steps=warm_up_steps, num_training_steps=t_total
-)
+# t_total = int(len(train_dataloader) * 3)
+# warm_up_steps = 0.1 * t_total
+# optimizer_params = []
+# for k, v in intervenable.interventions.items():
+#     optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+#     optimizer_params += [{"params": v[0].intervention_boundaries, "lr": 1e-2}]
+# optimizer = torch.optim.Adam(optimizer_params, lr=1e-3)
+# scheduler = get_linear_schedule_with_warmup(
+#     optimizer, num_warmup_steps=warm_up_steps, num_training_steps=t_total
+# )
 
 
-# You can define your custom compute_metrics function.
-def compute_metrics(eval_preds, eval_labels):
-    total_count = 0
-    correct_count = 0
-    for eval_pred, eval_label in zip(eval_preds, eval_labels):
-        actual_test_labels = eval_label[:, -1]
-        pred_test_labels = torch.argmax(eval_pred[:, -1], dim=-1)
-        correct_labels = actual_test_labels == pred_test_labels
-        total_count += len(correct_labels)
-        correct_count += correct_labels.sum().tolist()
-    accuracy = round(correct_count / total_count, 2)
-    return {"accuracy": accuracy}
+# # You can define your custom compute_metrics function.
+# def compute_metrics(eval_preds, eval_labels):
+#     total_count = 0
+#     correct_count = 0
+#     for eval_pred, eval_label in zip(eval_preds, eval_labels):
+#         actual_test_labels = eval_label[:, -1]
+#         pred_test_labels = torch.argmax(eval_pred[:, -1], dim=-1)
+#         correct_labels = actual_test_labels == pred_test_labels
+#         total_count += len(correct_labels)
+#         correct_count += correct_labels.sum().tolist()
+#     accuracy = round(correct_count / total_count, 2)
+#     return {"accuracy": accuracy}
 
 
-epochs = 3
-gradient_accumulation_steps = 4
-total_step = 0
-target_total_step = len(train_dataloader) * epochs
-temperature_start = 50.0
-temperature_end = 0.1
-temperature_schedule = (
-    torch.linspace(temperature_start, temperature_end, target_total_step)
-    .to(torch.bfloat16)
-    .to("cuda")
-)
-intervenable.set_temperature(temperature_schedule[total_step])
+# epochs = 3
+# gradient_accumulation_steps = 4
+# total_step = 0
+# target_total_step = len(train_dataloader) * epochs
+# temperature_start = 50.0
+# temperature_end = 0.1
+# temperature_schedule = (
+#     torch.linspace(temperature_start, temperature_end, target_total_step)
+#     .to(torch.bfloat16)
+#     .to("cuda")
+# )
+# intervenable.set_temperature(temperature_schedule[total_step])
 
 
-def calculate_loss(logits, labels):
-    shift_logits = logits[..., :, :].contiguous()
-    shift_labels = labels[..., :].contiguous()
-    # Flatten the tokens
-    loss_fct = CrossEntropyLoss()
-    shift_logits = shift_logits.view(-1, intervenable.model_config.vocab_size)
-    shift_labels = shift_labels.view(-1)
-    # Enable model parallelism
-    shift_labels = shift_labels.to(shift_logits.device)
-    loss = loss_fct(shift_logits, shift_labels)
+# def calculate_loss(logits, labels):
+#     shift_logits = logits[..., :, :].contiguous()
+#     shift_labels = labels[..., :].contiguous()
+#     # Flatten the tokens
+#     loss_fct = CrossEntropyLoss()
+#     shift_logits = shift_logits.view(-1, intervenable.model_config.vocab_size)
+#     shift_labels = shift_labels.view(-1)
+#     # Enable model parallelism
+#     shift_labels = shift_labels.to(shift_logits.device)
+#     loss = loss_fct(shift_logits, shift_labels)
 
-    for k, v in intervenable.interventions.items():
-        boundary_loss = 1.0 * v[0].intervention_boundaries.sum()
-    loss += boundary_loss
+#     for k, v in intervenable.interventions.items():
+#         boundary_loss = 1.0 * v[0].intervention_boundaries.sum()
+#     loss += boundary_loss
 
-    return loss
+#     return loss
 
-intervenable.model.train()  # train enables drop-off but no grads
-print("llama trainable parameters: ", count_parameters(intervenable.model))
-print("intervention trainable parameters: ", intervenable.count_parameters())
-train_iterator = trange(0, int(epochs), desc="Epoch")
-for epoch in train_iterator:
-    epoch_iterator = tqdm(
-        train_dataloader, desc=f"Epoch: {epoch}", position=0, leave=True
-    )
-    for step, inputs in enumerate(epoch_iterator):
-        for k, v in inputs.items():
-            if v is not None and isinstance(v, torch.Tensor):
-                inputs[k] = v.to("cuda")
-        b_s = inputs["input_ids"].shape[0]
-        _, counterfactual_outputs = intervenable(
-            {"input_ids": inputs["input_ids"]},
-            [{"input_ids": inputs["source_input_ids"]}],
-            {"sources->base": 80},  # swap 80th token
-        )
-        eval_metrics = compute_metrics(
-            [counterfactual_outputs.logits], [inputs["labels"]]
-        )
+# intervenable.model.train()  # train enables drop-off but no grads
+# print("llama trainable parameters: ", count_parameters(intervenable.model))
+# print("intervention trainable parameters: ", intervenable.count_parameters())
+# train_iterator = trange(0, int(epochs), desc="Epoch")
+# for epoch in train_iterator:
+#     epoch_iterator = tqdm(
+#         train_dataloader, desc=f"Epoch: {epoch}", position=0, leave=True
+#     )
+#     for step, inputs in enumerate(epoch_iterator):
+#         for k, v in inputs.items():
+#             if v is not None and isinstance(v, torch.Tensor):
+#                 inputs[k] = v.to("cuda")
+#         b_s = inputs["input_ids"].shape[0]
+#         _, counterfactual_outputs = intervenable(
+#             {"input_ids": inputs["input_ids"]},
+#             [{"input_ids": inputs["source_input_ids"]}],
+#             {"sources->base": 80},  # swap 80th token
+#         )
+#         eval_metrics = compute_metrics(
+#             [counterfactual_outputs.logits], [inputs["labels"]]
+#         )
 
-        # loss and backprop
-        loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"])
-        loss_str = round(loss.item(), 2)
-        epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
+#         # loss and backprop
+#         loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"])
+#         loss_str = round(loss.item(), 2)
+#         epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
 
-        if gradient_accumulation_steps > 1:
-            loss = loss / gradient_accumulation_steps
-        loss.backward()
-        if total_step % gradient_accumulation_steps == 0:
-            if not (gradient_accumulation_steps > 1 and total_step == 0):
-                optimizer.step()
-                scheduler.step()
-                intervenable.set_zero_grad()
-                intervenable.set_temperature(temperature_schedule[total_step])
-        total_step += 1
+#         if gradient_accumulation_steps > 1:
+#             loss = loss / gradient_accumulation_steps
+#         loss.backward()
+#         if total_step % gradient_accumulation_steps == 0:
+#             if not (gradient_accumulation_steps > 1 and total_step == 0):
+#                 optimizer.step()
+#                 scheduler.step()
+#                 intervenable.set_zero_grad()
+#                 intervenable.set_temperature(temperature_schedule[total_step])
+#         total_step += 1
 
-# evaluation on the test set
-eval_labels = []
-eval_preds = []
-with torch.no_grad():
-    epoch_iterator = tqdm(test_dataloader, desc=f"Test")
-    for step, inputs in enumerate(epoch_iterator):
-        for k, v in inputs.items():
-            if v is not None and isinstance(v, torch.Tensor):
-                inputs[k] = v.to("cuda")
-        b_s = inputs["input_ids"].shape[0]
-        _, counterfactual_outputs = intervenable(
-            {"input_ids": inputs["input_ids"]},
-            [{"input_ids": inputs["source_input_ids"]}],
-            {"sources->base": 80},  # swap 80th token
-        )
-        eval_labels += [inputs["labels"]]
-        eval_preds += [counterfactual_outputs.logits]
-eval_metrics = compute_metrics(eval_preds, eval_labels)
-print(eval_metrics)
+# # evaluation on the test set
+# eval_labels = []
+# eval_preds = []
+# with torch.no_grad():
+#     epoch_iterator = tqdm(test_dataloader, desc=f"Test")
+#     for step, inputs in enumerate(epoch_iterator):
+#         for k, v in inputs.items():
+#             if v is not None and isinstance(v, torch.Tensor):
+#                 inputs[k] = v.to("cuda")
+#         b_s = inputs["input_ids"].shape[0]
+#         _, counterfactual_outputs = intervenable(
+#             {"input_ids": inputs["input_ids"]},
+#             [{"input_ids": inputs["source_input_ids"]}],
+#             {"sources->base": 80},  # swap 80th token
+#         )
+#         eval_labels += [inputs["labels"]]
+#         eval_preds += [counterfactual_outputs.logits]
+# eval_metrics = compute_metrics(eval_preds, eval_labels)
+# print(eval_metrics)
 
 
 

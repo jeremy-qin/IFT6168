@@ -10,5 +10,6 @@ module load python/3.10
 module load arrow/14.0.0
 
 source venv/bin/activate
+pip install wandb
 
 python code/main.py

@@ -1,9 +1,9 @@
 default_params = {
-    "prealign": True,
+    "prealign": False,
     "model": "llama",
     "seed": 42,
     "sample": 10000,
-    "batch_size": 16,
+    "batch_size": 64,
     "layer": 15,
     "epochs": 3,
     "gradient_accumulation_steps": 4,
@@ -47,7 +47,7 @@ from pyvene import (
     RepresentationConfig,
     IntervenableConfig,
 )
-from pyvene import create_llama, create_gemma
+from pyvene import create_llama, create_gemma, create_gpt_neo, create_gpt2_lm, create_gru_lm
 from pyvene import set_seed, count_parameters
 
 
@@ -97,7 +97,9 @@ def experiment(params):
 
     print("Intervention setup")
     config = simple_boundless_das_position_config(type(model), "block_output", layer)
-    intervenable = IntervenableModel(config, model)
+    print("intervention model setup")
+    intervenable = IntervenableModel(config, model, use_fast=True)
+    print("intervetion model disable gradients")
     intervenable.set_device("cuda")
     intervenable.disable_model_gradients()
 
