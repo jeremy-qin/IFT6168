@@ -29,6 +29,7 @@ sys.path.append("/home/qinjerem/scratch/IFT6168/pyvene")
 import time
 import pyvene
 import torch
+import os
 import wandb
 from tqdm import tqdm, trange
 from datasets import Dataset
@@ -58,6 +59,8 @@ def experiment(params):
     from metrics import compute_metrics
     from loss import calculate_loss
 
+    os.environ['WANDB_MODE'] = 'offline'
+
     prealign = params["prealign"]
     model = params["model"]
     seed = params["seed"]
@@ -73,7 +76,8 @@ def experiment(params):
     print("Initializing Experiment")
     wandb.init(
         project="causality",
-        config=params
+        config=params,
+        name=f"{model}_layer{layer}_bs{batch_size}"
     )
 
     if model == "llama":
@@ -183,7 +187,7 @@ def experiment(params):
     eval_metrics = compute_metrics(eval_preds, eval_labels)
     print(eval_metrics)
     wandb.log({"eval acc": eval_metrics["accuracy"]})
-
+    wandb.finish()
     print("Done")
 
 if __name__ == "__main__":
