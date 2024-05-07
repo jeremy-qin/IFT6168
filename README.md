@@ -5,8 +5,8 @@ To run this code, ideally it needs to be on a A100 GPU or else it might get stuc
 
 Below are the steps to run the experiments to reproduce results in the Boundless DAS paper.
 1. Git clone pyvene repo: https://github.com/stanfordnlp/pyvene/tree/main
-2. Install dependencies from this repo: 
-    `pip install -r requirements.txt`
+2. Install dependencies from this repo and assure that arrow is loaded beforehand with: `module load arrow/14.0.0`: 
+    Then you can run : `pip install -r requirements.txt`
 3. On Narval, there is only internet connection on its login node, so you need to first download the Alpaca model ("sharpbai/alpaca-7b-merged")
 4. In the code at "pyvene/pyvene/models/llama/modelings_intervenable_llama.py" modify the path for the model
 5. To allow for gemma model, we also need to add it to the imports of the pyvene repo we cloned at "pyvene/pyvene/__init__.py" and add the following line:
