@@ -3,12 +3,22 @@ from torch.utils.data import DataLoader
 from tutorial_price_tagging_utils import (
     bound_alignment_sampler,
     lower_bound_alignment_example_sampler,
+    midpoint_alignment_sampler,
+    bracket_alignment_sampler
 )
 
-def create_data(sample, tokenizer, batch_size):
-    raw_data = bound_alignment_sampler(
-        tokenizer, sample, [lower_bound_alignment_example_sampler]
-    )
+def create_data(sample, tokenizer, batch_size, alignment_sampler):
+    print(alignment_sampler)
+    if alignment_sampler == "lower":
+        raw_data = bound_alignment_sampler(
+            tokenizer, sample, [lower_bound_alignment_example_sampler]
+        )
+    elif alignment_sampler == "midpoint":
+        raw_data = midpoint_alignment_sampler(tokenizer, sample)
+    elif alignment_sampler == "bracket":
+        raw_data = bracket_alignment_sampler(tokenizer, sample)
+    else:
+        raise NotImplementedError("This alignment sampler is not implemented.")
 
     raw_train = (
         raw_data[0][:8000],

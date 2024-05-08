@@ -1,6 +1,7 @@
 default_params = {
     "prealign": False,
     "model": "llama",
+    "alignment_sampler": "midpoint",
     "seed": 42,
     "sample": 10000,
     "batch_size": 64,
@@ -63,6 +64,7 @@ def experiment(params):
 
     prealign = params["prealign"]
     model = params["model"]
+    alignment_sampler = params["alignment_sampler"]
     seed = params["seed"]
     sample = params["sample"]
     batch_size = params["batch_size"]
@@ -77,7 +79,7 @@ def experiment(params):
     wandb.init(
         project="causality",
         config=params,
-        name=f"{model}_layer{layer}_bs{batch_size}"
+        name=f"{model}_layer{layer}_bs{batch_size}_{alignment_sampler}"
     )
 
     if model == "llama":
@@ -97,7 +99,7 @@ def experiment(params):
     # data loaders
     ###################
     print("Create Dataloaders")
-    train_dataloader, eval_dataloader, test_dataloader = create_data(sample, tokenizer, batch_size)
+    train_dataloader, eval_dataloader, test_dataloader = create_data(sample, tokenizer, batch_size, alignment_sampler)
 
     print("Intervention setup")
     config = simple_boundless_das_position_config(type(model), "block_output", layer)
