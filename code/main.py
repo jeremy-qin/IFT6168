@@ -79,7 +79,7 @@ def experiment(params):
     wandb.init(
         project="causality",
         config=params,
-        name=f"{model}_layer{layer}_bs{batch_size}_{alignment_sampler}"
+        name=f"{model}_seed{seed}_layer{layer}_bs{batch_size}_{alignment_sampler}"
     )
 
     if model == "llama":
