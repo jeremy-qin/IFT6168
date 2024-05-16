@@ -1,3 +1,6 @@
+# The code here is inspired by the tutorial found at
+# https://github.com/stanfordnlp/pyvene/blob/main/tutorials/advanced_tutorials/Boundless_DAS.ipynb
+
 default_params = {
     "prealign": False,
     "model": "mistral",
