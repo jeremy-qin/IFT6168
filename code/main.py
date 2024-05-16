@@ -1,11 +1,11 @@
 default_params = {
     "prealign": False,
-    "model": "llama",
-    "alignment_sampler": "midpoint",
+    "model": "mistral",
+    "alignment_sampler": "lower",
     "seed": 42,
     "sample": 10000,
     "batch_size": 64,
-    "layer": 15,
+    "layer": 5,
     "epochs": 3,
     "gradient_accumulation_steps": 4,
     "temperature_start": 50.0,
@@ -49,7 +49,7 @@ from pyvene import (
     RepresentationConfig,
     IntervenableConfig,
 )
-from pyvene import create_llama, create_gemma, create_gpt_neo, create_gpt2_lm, create_gru_lm
+from pyvene import create_llama, create_gemma, create_gpt_neo, create_gpt2, create_gpt2_classifier, create_mistral
 from pyvene import set_seed, count_parameters
 
 
@@ -60,6 +60,7 @@ def experiment(params):
     from metrics import compute_metrics
     from loss import calculate_loss
 
+    torch.cuda.empty_cache()
     os.environ['WANDB_MODE'] = 'offline'
 
     prealign = params["prealign"]
@@ -86,8 +87,14 @@ def experiment(params):
         config, tokenizer, model = create_llama()
     elif model == "gemma":
         config, tokenizer, model = create_gemma()
+    elif model == "gpt2":
+        config, tokenizer, model = create_gpt2_classifier()
+    else:
+        config, tokenizer, model = create_mistral()
     _ = model.to("cuda")  
-    _ = model.eval() 
+    # _ = model.eval() 
+    print("config")
+    print(config)
 
     print("Task alignment check")
     if prealign == True:
@@ -130,10 +137,17 @@ def experiment(params):
     )
     intervenable.set_temperature(temperature_schedule[total_step])
     print("Training")
-    intervenable.model.train()  # train enables drop-off but no grads
+    intervenable.model.train()  
     print("llama trainable parameters: ", count_parameters(intervenable.model))
     print("intervention trainable parameters: ", intervenable.count_parameters())
     train_iterator = trange(0, int(epochs), desc="Epoch")
+    
+    #Assign which token to swar
+    if model == "llama":
+        token_swap = 80
+    elif model == "mistral":
+        token_swap = 77
+
     for epoch in train_iterator:
         epoch_iterator = tqdm(
             train_dataloader, desc=f"Epoch: {epoch}", position=0, leave=True
@@ -146,7 +160,7 @@ def experiment(params):
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
                 [{"input_ids": inputs["source_input_ids"]}],
-                {"sources->base": 80},  # swap 80th token
+                {"sources->base": token_swap},
             )
             eval_metrics = compute_metrics(
                 [counterfactual_outputs.logits], [inputs["labels"]]
@@ -182,7 +196,7 @@ def experiment(params):
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
                 [{"input_ids": inputs["source_input_ids"]}],
-                {"sources->base": 80},  # swap 80th token
+                {"sources->base": token_swap},
             )
             eval_labels += [inputs["labels"]]
             eval_preds += [counterfactual_outputs.logits]

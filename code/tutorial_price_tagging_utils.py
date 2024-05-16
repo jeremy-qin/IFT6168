@@ -93,7 +93,7 @@ def pricing_tag_game_example_sampler(
     output_ids = (torch.ones(input_ids.shape[0]) * -100).long().tolist()
     output_ids[-1] = label
     input_ids = input_ids.tolist()
-    assert len(input_ids) == 82
+    # assert len(input_ids) == 82
 
     return input_ids, output_ids
 
@@ -149,6 +149,10 @@ def factual_sampler(
             input_ids, output_ids = pricing_tag_game_example_sampler(
                 tokenizer, amount, lower_bound, bound_width
             )
+            if _ == 0:
+                print("Input ID:", input_ids, "Output ID:", output_ids)
+                print("Decoded input:", tokenizer.decode(input_ids))
+                print("Expected label:", "Yes" if output_ids[-1] == tokenizer.convert_tokens_to_ids("Yes") else "No")
         elif game == "continent_retrieval":
             pass
         all_input_ids += [input_ids]
@@ -253,10 +257,11 @@ def bound_alignment_sampler(
         base_upper_bound_str = "%.2f" % base_upper_bound_sample
         source_lower_bound_str = "%.2f" % source_lower_bound_sample
         source_upper_bound_str = "%.2f" % source_upper_bound_sample
-
-        # print(f"base: [{base_lower_bound_str}, {base_upper_bound_str}], {base_amount_str}")
-        # print(f"source: [{source_lower_bound_str}, {source_upper_bound_str}], {source_amount_str}")
-        # print(f"ctf label: {ctf_label_str}")
+        
+        if _ == 0:
+            print(f"base: [{base_lower_bound_str}, {base_upper_bound_str}], {base_amount_str}")
+            print(f"source: [{source_lower_bound_str}, {source_upper_bound_str}], {source_amount_str}")
+            print(f"ctf label: {ctf_label_str}")
 
         base_instruction = f"Please say yes only if it costs between {base_lower_bound_str} and {base_upper_bound_str} dollars, otherwise no."
         source_instruction = f"Please say yes only if it costs between {source_lower_bound_str} and {source_upper_bound_str} dollars, otherwise no."
@@ -286,8 +291,14 @@ def bound_alignment_sampler(
         all_ctf_output_ids += [ctf_output_ids]
         all_intervention_ids += [intervention_id]
 
-        assert len(base_input_ids) == 82
-        assert len(source_input_ids) == 82
+        if _ == 0:
+            token_id_20 = base_input_ids[77]
+            word_20 = tokenizer.decode([token_id_20])
+            print(len(base_input_ids))
+            print(f"Token ID: {token_id_20}, Word: {word_20}")
+
+        # assert len(base_input_ids) == 82
+        # assert len(source_input_ids) == 82
 
     return (
         all_base_input_ids,
@@ -364,8 +375,8 @@ def midpoint_alignment_sampler(
         all_source_input_ids += [source_input_ids]
         all_ctf_output_ids += [ctf_output_ids]
         all_intervention_ids += [0]
-        assert len(base_input_ids) == 82
-        assert len(source_input_ids) == 82
+        # assert len(base_input_ids) == 82
+        # assert len(source_input_ids) == 82
         
     return all_base_input_ids, all_source_input_ids, all_ctf_output_ids, all_intervention_ids
 
@@ -434,7 +445,7 @@ def bracket_alignment_sampler(
         all_source_input_ids += [source_input_ids]
         all_ctf_output_ids += [ctf_output_ids]
         all_intervention_ids += [0]
-        assert len(base_input_ids) == 82
-        assert len(source_input_ids) == 82
+        # assert len(base_input_ids) == 82
+        # assert len(source_input_ids) == 82
         
     return all_base_input_ids, all_source_input_ids, all_ctf_output_ids, all_intervention_ids
